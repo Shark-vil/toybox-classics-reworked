@@ -1,0 +1,22 @@
+"Unlittwotexture"
+{
+	"$basetexture" "sprites/lgtning"
+	"$texture2" "sprites/lgtning"
+	"$additive" 1
+	"Proxies"
+	{
+		"TextureScroll"
+		{
+			texturescrollvar "$texture2transform"
+			texturescrollrate 5
+			texturescrollangle 90
+		}
+		"TextureScroll"
+		{
+			texturescrollvar "$basetexturetransform"
+			texturescrollrate 3
+			texturescrollangle 270
+		}
+
+	}
+}

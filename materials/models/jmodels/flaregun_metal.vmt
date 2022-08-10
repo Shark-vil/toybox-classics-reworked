@@ -1,0 +1,7 @@
+VertexLitGeneric
+{
+   $phong       1
+   $phongexponent		5
+   $phongboost		1.0
+   $basetexture "models/jmodels/flaregun_metal.vtf"
+}
