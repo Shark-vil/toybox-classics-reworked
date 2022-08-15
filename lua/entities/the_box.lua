@@ -6,11 +6,17 @@ ENT.PrintName = "The Box"
 ENT.RenderGroup = RENDERGROUP_OPAQUE
 ENT.Spaces = {}
 ENT.SpaceEnt = {}
+
+local LockedZones = {}
+local tocreatespace = {}
 local MasterEntity = nil
-
 local maxbox = CreateConVar("thebox_maximumboxes", "900", {FCVAR_REPLICATED, FCVAR_ARCHIVE})
-
 local boxperthink = CreateConVar("thebox_boxperthink", "5", {FCVAR_REPLICATED, FCVAR_ARCHIVE})
+local maxents = maxbox:GetInt() or 900
+local boxes = 0
+local toolsWhitelist = {
+	"material", "colour", "weld", "light", "balloon", "muscle", "motor", "hydraulic", "elastic", "axis", "slider", "nail", "pulley", "rope", "ballsocket", "winch", "lamp", "turret", "thruster", "wheel", "button", "paint", "ignite", "button", "dynamite"
+}
 
 function ENT:Initialize()
 	if SERVER then
@@ -32,21 +38,25 @@ end
 
 local function TheBoxCanTool(pl, tr, toolmode)
 	if tr.Entity.TheBox then
-		if table.HasValue({"material", "colour", "weld", "light", "balloon", "muscle", "motor", "hydraulic", "elastic", "axis", "slider", "nail", "pulley", "rope", "ballsocket", "winch", "lamp", "turret", "thruster", "wheel", "button", "paint", "ignite", "button", "dynamite"}, toolmode) then
+		if table.HasValue(toolsWhitelist, toolmode) then
 			return true
 		end
 
 		return false
 	end
 end
-
-hook.Add("CanTool", "TheBoxCanTool", TheBoxCanTool)
+hook.Add("CanTool", "ToyBoxReworked.TheBox.CanToolRestiction", TheBoxCanTool)
 
 local function TheBoxPickup(pl, ent)
 	if ent.TheBox then return false end
 end
+hook.Add("PhysgunPickup", "ToyBoxReworked.TheBox.PhysgunPickup", TheBoxPickup)
 
-hook.Add("PhysgunPickup", "TheBoxPickup", TheBoxPickup)
+local function PostCleanupMap()
+	LockedZones = {}
+	boxes = 0
+end
+hook.Add("PostCleanupMap", "ToyBoxReworked.TheBox.ResetSettings", PostCleanupMap)
 
 local function TheBoxMove(pl, move)
 	if pl:GetMoveType() ~= MOVETYPE_NOCLIP then return end
@@ -59,10 +69,9 @@ local function TheBoxMove(pl, move)
 	local trace = {}
 	trace.start = pl:GetPos()
 	trace.endpos = pl:GetPos() + vel * FrameTime() + vel:GetNormalized()
-
 	trace.filter = {pl}
-
 	trace.mask = MASK_SHOT_HULL
+
 	local tr = util.TraceEntity(trace, pl)
 
 	if tr.Hit and (tr.Entity.TheBox or (tr.HitWorld and IsValid(MasterEntity))) then
@@ -74,9 +83,7 @@ local function TheBoxMove(pl, move)
 		move:SetUpSpeed(0)
 	end
 end
-
-hook.Add("Move", "TheBoxMove", TheBoxMove)
-local tocreatespace = {}
+hook.Add("Move", "ToyBoxReworked.TheBox.PlayerMoveSettings", TheBoxMove)
 
 local function TheBoxThink()
 	if #tocreatespace > 0 then
@@ -89,16 +96,14 @@ local function TheBoxThink()
 		end
 	end
 end
-
-hook.Add("Think", "TheBoxThink", TheBoxThink)
+hook.Add("Think", "ToyBoxReworked.TheBox.ThinkCreateSpaces", TheBoxThink)
 
 local function TheBoxSpawn(pl)
 	if pl.OrigSpawnPosition and IsValid(MasterEntity) then
 		pl:SetPos(pl.OrigSpawnPosition)
 	end
 end
-
-hook.Add("PlayerSpawn", "TheBoxSpawn", TheBoxSpawn)
+hook.Add("PlayerSpawn", "ToyBoxReworked.TheBox.PlayerSpawn", TheBoxSpawn)
 
 local function R(x)
 	if x < 0 then return math.ceil(x) end
@@ -137,17 +142,26 @@ function ENT:CheckBoth(vec)
 	if self:Check(vec) or self:CheckEnt(vec) then return true end
 end
 
-local maxents = maxbox:GetInt() or 900
-local boxes = 0
+function ENT:VectorHasLocked(vec)
+	return LockedZones[vec.x .. "/" .. vec.y .. "/" .. vec.z]
+end
 
 function ENT:Create(vec)
-	boxes = boxes + 1
 	if boxes > maxents then return false end
-	local ent = ents.Create(self.ClassName)
-	ent:SetPos(vec * 38)
-	ent:Spawn()
-	ent:Activate()
-	self.SpaceEnt[vec.x .. "/" .. vec.y .. "/" .. vec.z] = ent
+
+	if not self:VectorHasLocked(vec) then
+		local ent = ents.Create(self.ClassName)
+		ent:SetPos(vec * 38)
+		ent:Spawn()
+		ent:Activate()
+
+		local spVec = ent:Conv(ent:GetPos())
+		self.SpaceEnt[spVec.x .. "/" .. spVec.y .. "/" .. spVec.z] = ent
+		ent.SpaceEnt[spVec.x .. "/" .. spVec.y .. "/" .. spVec.z] = ent
+		LockedZones[spVec.x .. "/" .. spVec.y .. "/" .. spVec.z] = true
+
+		boxes = boxes + 1
+	end
 
 	return true
 end
@@ -208,15 +222,25 @@ function ENT:SpawnFunction(ply, tr)
 	if not IsValid(MasterEntity) then
 		MasterEntity = ents.Create("info_player_terrorist") -- Eh, it's easier to do it this way.
 		MasterEntity:Spawn()
-		undo.Create("Escape The Box!")
-		undo.AddEntity(MasterEntity)
 
-		undo.AddFunction(function()
+		local function ResetParams()
 			self.SpaceEnt = {}
 			self.Spaces = {}
+			LockedZones = {}
 			boxes = 0
-		end)
+		end
 
+		do
+			local OnRemove = MasterEntity.OnRemove
+			function MasterEntity:OnRemove()
+				ResetParams()
+				OnRemove(MasterEntity)
+			end
+		end
+
+		undo.Create("Escape The Box!")
+		undo.AddEntity(MasterEntity)
+		undo.AddFunction(ResetParams)
 		undo.SetPlayer(ply)
 		undo.Finish()
 	end
@@ -249,14 +273,14 @@ end
 
 function ENT:OnRemove()
 	local vec = self:Conv(self:GetPos())
-	local ent = self.SpaceEnt[vec.x .. "/" .. vec.y .. "/" .. vec.z]
 	self.SpaceEnt[vec.x .. "/" .. vec.y .. "/" .. vec.z] = nil
 	self.Spaces[vec.x .. "/" .. vec.y .. "/" .. vec.z] = vec
 	boxes = boxes - 1
 end
 
 function ENT:OnTakeDamage(dmginfo)
-	table.insert(tocreatespace, {self, self:Conv(self:GetPos())})
+	local vec = self:Conv(self:GetPos())
+	table.insert(tocreatespace, { self, vec })
 end
 
 if CLIENT then
