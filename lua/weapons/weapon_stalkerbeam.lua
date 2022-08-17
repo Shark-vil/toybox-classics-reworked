@@ -173,7 +173,7 @@ function SWEP:Shoot()
 		DMG:SetAttacker(self:GetOwner())
 		DMG:SetInflictor(self)
 		DMG:SetDamagePosition(traceres.HitPos)
-		DMG:SetDamageForce(pPlayer:GetAimVector() * (10000 * self.dt.power))
+		DMG:SetDamageForce(owner:GetAimVector() * (10000 * self.dt.power))
 		traceres.Entity:TakeDamageInfo(DMG)
 	end
 end
