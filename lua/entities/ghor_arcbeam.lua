@@ -59,7 +59,11 @@ end
 local ENT = {}
 ENT.Type = "anim"
 ENT.Base = "base_anim"
-ENT.Range = 350
+do
+	local range = 350
+	ENT.Range = range
+	ENT.RangeSqr = range ^ 2
+end
 ENT.Cone = 50
 local tracep = {}
 tracep.mask = MASK_SHOT
@@ -163,13 +167,13 @@ end
 if SERVER then
 	function ENT:SeekTarget(pos, dir)
 		local ent = self
-		local currentdist = self.Range
+		local currentdist = self.RangeSqr
 		local currentang = self.Cone
 
 		for k, v in ipairs(ents.FindInSphere(pos, self.Range)) do
 			if v:IsNPC() or (v:IsPlayer() and v ~= self.Player and v:Alive()) then
 				local entpos = v:GetPos() + v:OBBCenter()
-				local dist = entpos:Distance(pos)
+				local dist = entpos:DistToSqr(pos)
 
 				if dist < currentdist then
 					local ang = math.abs(self:EntAng(v, pos, dir))
@@ -189,7 +193,8 @@ if SERVER then
 	function ENT:EntAng(ent, pos, dir)
 		local entpos = ent:GetPos() + ent:OBBCenter()
 		local entang = ent:GetAngles()
-		local localpos, localang = WorldToLocal(entpos, entang, pos, dir:Angle())
+		-- local localpos, localang = WorldToLocal(entpos, entang, pos, dir:Angle())
+		local localpos, _ = WorldToLocal(entpos, entang, pos, dir:Angle())
 		local linedist = math.sqrt(localpos.z ^ 2 + localpos.y ^ 2)
 		local ang = math.deg(math.atan2(localpos.x, linedist)) - 90
 
@@ -223,7 +228,7 @@ if SERVER then
 
 		if IsValid(ent) then
 			local entpos = ent:GetPos() + ent:OBBCenter()
-			local dist = entpos:Distance(pos)
+			local dist = entpos:DistToSqr(pos)
 			local entconeang = math.abs(self:EntAng(ent, pos, ang:Forward()))
 
 			if ent:GetClass() == "npc_rollermine" then
@@ -232,7 +237,7 @@ if SERVER then
 				ent:Fire("SelfDestruct", nil, 0)
 			end
 
-			if (dist > self.Range) or (entconeang > self.Cone) or (ent:IsPlayer() and not ent:Alive()) or (ent:IsNPC() and (ent:Health() <= 0)) then
+			if (dist > self.RangeSqr) or (entconeang > self.Cone) or (ent:IsPlayer() and not ent:Alive()) or (ent:IsNPC() and (ent:Health() <= 0)) then
 				self.dt.endent = NULL
 				ent = NULL
 			else
@@ -293,7 +298,7 @@ if SERVER then
 end
 
 if CLIENT then
-	local beamglowmat1 = Material("sprites/blueglow1")
+	-- local beamglowmat1 = Material("sprites/blueglow1")
 	local beamglowmat2 = Material("sprites/blueglow2")
 	local beammat = Material("sprites/scav_tr_phys")
 	local particleglow = Material("sprites/physg_glow1")
