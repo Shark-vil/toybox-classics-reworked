@@ -1,4 +1,4 @@
-local ents_Create, hook_Add, math_ceil, math_Clamp, math_floor, player_GetAll, table_insert, table_remove, undo_Finish, undo_SetPlayer, util_TraceEntity, Vector, IsValid, table_HasValue, FrameTime, undo_AddEntity, undo_AddFunction, undo_Create, ipairs, pairs = ents.Create, hook.Add, math.ceil, math.Clamp, math.floor, player.GetAll, table.insert, table.remove, undo.Finish, undo.SetPlayer, util.TraceEntity, Vector, IsValid, table.HasValue, FrameTime, undo.AddEntity, undo.AddFunction, undo.Create, ipairs, pairs
+local ents_Create, hook_Add, math_ceil, math_Clamp, math_floor, player_GetAll, table_insert, table_remove, undo_Finish, undo_SetPlayer, util_TraceEntity, Vector, IsValid, table_HasValue, FrameTime, undo_AddEntity, undo_AddFunction, undo_Create, ipairs, pairs, tonumber = ents.Create, hook.Add, math.ceil, math.Clamp, math.floor, player.GetAll, table.insert, table.remove, undo.Finish, undo.SetPlayer, util.TraceEntity, Vector, IsValid, table.HasValue, FrameTime, undo.AddEntity, undo.AddFunction, undo.Create, ipairs, pairs, tonumber
 
 local language_Add, render_SuppressEngineLighting
 
@@ -17,14 +17,12 @@ ENT.SpaceEnt = {}
 local LockedZones = {}
 local tocreatespace = {}
 local MasterEntity = nil
-
 local maxbox = CreateConVar("thebox_maximumboxes", "900", {FCVAR_REPLICATED, FCVAR_ARCHIVE})
-
+local cvleaving = CreateConVar("thebox_leaving", "1", {FCVAR_REPLICATED, FCVAR_ARCHIVE})
 local boxperthink = CreateConVar("thebox_boxperthink", "5", {FCVAR_REPLICATED, FCVAR_ARCHIVE})
-
-local maxents = maxbox:GetInt() or 900
+local theleaving = 1
+local maxents = 900
 local boxes = 0
-
 local toolsWhitelist = {"material", "colour", "weld", "light", "balloon", "muscle", "motor", "hydraulic", "elastic", "axis", "slider", "nail", "pulley", "rope", "ballsocket", "winch", "lamp", "turret", "thruster", "wheel", "button", "paint", "ignite", "button", "dynamite"}
 
 function ENT:Initialize()
@@ -42,6 +40,10 @@ function ENT:Initialize()
 
 		local physobj = self.Entity:GetPhysicsObject()
 		physobj:EnableMotion(false)
+
+		theleaving = cvleaving:GetInt() or 1
+		maxents = maxbox:GetInt() or 900
+		maxents = math.Clamp(maxents, 294, maxents < 294 and 294 or maxents)
 	end
 end
 
@@ -62,7 +64,9 @@ end
 hook_Add("PhysgunPickup", "ToyBoxReworked.TheBox.PhysgunPickup", TheBoxPickup)
 
 local function PostCleanupMap()
+	MasterEntity = nil
 	LockedZones = {}
+	tocreatespace = {}
 	boxes = 0
 end
 
@@ -161,9 +165,12 @@ function ENT:VectorHasLocked(vec)
 end
 
 function ENT:Create(vec)
-	if boxes > maxents then return false end
+	local has_leaving = theleaving == 1
+	if not has_leaving and boxes > maxents then return false end
 
-	if not self:VectorHasLocked(vec) then
+	if has_leaving and boxes >= maxents then
+		return true
+	elseif not self:VectorHasLocked(vec) then
 		local ent = ents_Create(self.ClassName)
 		ent:SetPos(vec * 38)
 		ent:Spawn()
@@ -288,7 +295,11 @@ function ENT:OnRemove()
 	local vec = self:Conv(self:GetPos())
 	self.SpaceEnt[vec.x .. "/" .. vec.y .. "/" .. vec.z] = nil
 	self.Spaces[vec.x .. "/" .. vec.y .. "/" .. vec.z] = vec
-	boxes = boxes - 1
+
+	if boxes + 1 < maxents then
+		boxes = boxes - 1
+		if boxes < 0 then boxes = 0 end
+	end
 end
 
 function ENT:OnTakeDamage(dmginfo)
