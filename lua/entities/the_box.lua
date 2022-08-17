@@ -1,4 +1,4 @@
-local ents_Create, hook_Add, math_ceil, math_Clamp, math_floor, player_GetAll, table_insert, table_remove, undo_Finish, undo_SetPlayer, util_TraceEntity, Vector, IsValid, table_HasValue, FrameTime, undo_AddEntity, undo_AddFunction, undo_Create, ipairs, pairs, tonumber = ents.Create, hook.Add, math.ceil, math.Clamp, math.floor, player.GetAll, table.insert, table.remove, undo.Finish, undo.SetPlayer, util.TraceEntity, Vector, IsValid, table.HasValue, FrameTime, undo.AddEntity, undo.AddFunction, undo.Create, ipairs, pairs, tonumber
+local ents_Create, hook_Add, math_ceil, math_Clamp, math_floor, player_GetAll, table_insert, table_remove, undo_Finish, undo_SetPlayer, util_TraceEntity, Vector, IsValid, table_HasValue, FrameTime, undo_AddEntity, undo_AddFunction, undo_Create, ipairs, pairs = ents.Create, hook.Add, math.ceil, math.Clamp, math.floor, player.GetAll, table.insert, table.remove, undo.Finish, undo.SetPlayer, util.TraceEntity, Vector, IsValid, table.HasValue, FrameTime, undo.AddEntity, undo.AddFunction, undo.Create, ipairs, pairs
 
 local language_Add, render_SuppressEngineLighting
 
