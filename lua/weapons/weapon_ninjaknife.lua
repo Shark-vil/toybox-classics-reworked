@@ -8,6 +8,8 @@ end
 SWEP.PrintName = "Ninja Knife"
 SWEP.Author = "Emi"
 SWEP.Spawnable = true
+-- SWEP.ViewModel = "models/weapons/v_models/v_knife_spy.mdl"
+SWEP.WorldModel = "models/weapons/w_knife_t.mdl"
 SWEP.AdminSpawnable = true
 --SWEP.Base = "weapon_base"
 SWEP.Category = "Toybox Classics"
