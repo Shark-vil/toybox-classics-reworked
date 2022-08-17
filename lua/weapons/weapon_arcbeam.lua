@@ -298,7 +298,7 @@ function SWEP:Holster()
 end
 
 if CLIENT then
-  local shinymat = Material("models/shiny")
+  -- local shinymat = Material("models/shiny")
   local vmat = Material("models/weapons/V_physcannon/v_superphyscannon_sheet")
   local wmat = Material("models/weapons/W_physics/w_physics_sheet2")
   local vec_illum = Vector(0.25, 0.25, 0.25)
